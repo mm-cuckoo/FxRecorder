@@ -37,14 +37,14 @@ public class AudioPlayer {
 
     public boolean statrPlay(PlayerAudioInfo audioInfo) {
         if (isPlaying) {
-            FxLog.d(TAG, "Player already started !");
+            FxLog.i(TAG, "Player already started !");
             return false;
         }
         mAudioBufferSzie = AudioTrack.getMinBufferSize(audioInfo.getSampleRateInHz(),
                 audioInfo.getChannelConfig(), audioInfo.getAudioFormat());
 
         if (mAudioBufferSzie == AudioTrack.ERROR_BAD_VALUE) {
-            FxLog.d(TAG, "Invalid parameter !");
+            FxLog.e(TAG, "Invalid parameter !");
             sendStatus(AudioStatus.ERROR_GET_BUFFER_SIZE_FAIL);
             return false;
         }

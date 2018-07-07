@@ -1,5 +1,6 @@
 package com.cfox.fxrecorder.activity;
 
+import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
@@ -23,6 +24,7 @@ import com.cfox.fxrlib.recorder.RecorderConstants;
 import com.cfox.fxrlib.recorder.wav.audio.AudioStatus;
 import com.cfox.fxrlib.service.RecorderService;
 import com.cfox.fxrlib.service.ServiceConstants;
+import com.cfox.fxrlib.service.connection.RecorderServiceConnection;
 
 /**
  * **********************************************
@@ -33,8 +35,8 @@ import com.cfox.fxrlib.service.ServiceConstants;
  * Msg:
  * **********************************************
  */
-public class RecorderActivity extends BaseActivity implements View.OnClickListener,
-        ServiceConstants , RecorderConstants , Constants,AudioStatus {
+public class RecorderActivity extends Activity implements View.OnClickListener,
+        ServiceConstants , RecorderConstants , Constants ,AudioStatus {
 
     private static final String TAG = "RecorderActivity";
 
@@ -44,9 +46,9 @@ public class RecorderActivity extends BaseActivity implements View.OnClickListen
     private Button mBtnPause;
     private Button mBtnResume;
     private Button mBtnStop;
-    
-    private ICreateRecorderService mCreateRecorder;
 
+    private RecorderServiceConnection conn;
+    
     private ICallBack.Stub callBack = new ICallBack.Stub() {
         @Override
         public void back(final Bundle bundle) throws RemoteException {
@@ -63,7 +65,7 @@ public class RecorderActivity extends BaseActivity implements View.OnClickListen
         }
     };
 
-    private IWaveCallBack.Stub waveCallBack = new IWaveCallBack.Stub() {
+    private IWaveCallBack.Stub mWaveCallBack = new IWaveCallBack.Stub() {
         @Override
         public void back(Bundle bundle) throws RemoteException {
             Message message = mHandler.obtainMessage(HANDLER_KEY_RECORDER_WAVE);
@@ -136,6 +138,7 @@ public class RecorderActivity extends BaseActivity implements View.OnClickListen
     }
 
     private void initBindService() {
+        conn = new RecorderServiceConnection(mWaveCallBack);
         Intent intent = new Intent(this, RecorderService.class);
         intent.setAction(ServiceConstants.BIND_TYPE_RECORDER);
         bindService(intent, conn, BIND_AUTO_CREATE);
@@ -181,51 +184,19 @@ public class RecorderActivity extends BaseActivity implements View.OnClickListen
     private void startRecorder() {
 
         String path = Environment.getExternalStorageDirectory().getPath();
-        try {
-            mCreateRecorder.startRecorder(null,callBack);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
+//        conn.starRecorder(callBack);
+        conn.starRecorder(path + "/AAAPath/","hello", callBack);
     }
 
     private void pauseRecorder() {
-        try {
-            mCreateRecorder.pauseRecorder(null, callBack);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
+        conn.pauseRecorder(null, callBack);
     }
 
     private void resumRecorder() {
-        try {
-            mCreateRecorder.resumeRecorder(null, callBack);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
+        conn.resumeRecorder(null, callBack);
     }
 
     private void stopRecorder() {
-        try {
-            mCreateRecorder.stopRecorder(null, callBack);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
+        conn.stopRecorder(null, callBack);
     }
-
-    private ServiceConnection conn = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            mCreateRecorder = ICreateRecorderService.Stub.asInterface(iBinder);
-            try {
-                mCreateRecorder.setWaveListener(waveCallBack);
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-            mCreateRecorder = null;
-        }
-    };
 }

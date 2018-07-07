@@ -46,4 +46,13 @@ public class RecorderService extends Service implements ServiceConstants {
         }
         return null;
     }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mRecorderCapture = null;
+        mRecorderPlayer = null;
+        mCreateRecorderBind = null;
+        mPlayRecorderBind = null;
+    }
 }

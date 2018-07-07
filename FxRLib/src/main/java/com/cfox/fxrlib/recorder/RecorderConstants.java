@@ -19,7 +19,4 @@ public interface RecorderConstants {
     String GET_PLAY_RECORDER_STATUS             = "get_paly_recorder_status";
     String PLAY_RECORDER_STATUS                 = "play_recorder_status";
     String PLAY_RECORDER_WAVE_DATE              = "Play_recorder_wave_date";
-
-    String FILE_STATUS                          = "file_status";
-
 }

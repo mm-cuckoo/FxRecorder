@@ -10,6 +10,7 @@ import com.cfox.fxrlib.log.FxLog;
 import com.cfox.fxrlib.recorder.wav.IAudioStatusListener;
 import com.cfox.fxrlib.recorder.wav.IAudioWaveDataListener;
 import com.cfox.fxrlib.recorder.wav.NativeRecorderWavPlayer;
+import com.cfox.fxrlib.recorder.wav.audio.AudioStatus;
 
 import java.io.IOException;
 
@@ -23,9 +24,9 @@ import java.io.IOException;
  * **********************************************
  */
 public class RecorderPlayer implements IAudioStatusListener,
-        IAudioWaveDataListener {
+        IAudioWaveDataListener, AudioStatus {
 
-    private static final String TAG = "RecorderCapture";
+    private static final String TAG = "RecorderPlayer";
 
     private NativeRecorderWavPlayer mNativeRecorderWavPlayer;
     private ICallBack mCallBack;
@@ -46,14 +47,18 @@ public class RecorderPlayer implements IAudioStatusListener,
 
     public void startPlay(String filePath){
         if (!mFileEngine.verifyFile(filePath)) {
+            FxLog.e(TAG, "no player file ....");
+            statusChange(ERROR_NO_PLAY_FILE);
             return;
         }
 
         try {
             mNativeRecorderWavPlayer.startPlay(filePath);
         } catch (IOException e) {
-            e.printStackTrace();
+            statusChange(ERROR_PALY_FAILURE);
+            FxLog.e(TAG, "play error",e);
         }
+
     }
 
     public void pausePlay() {

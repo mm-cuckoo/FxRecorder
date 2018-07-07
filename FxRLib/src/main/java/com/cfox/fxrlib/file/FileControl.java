@@ -2,6 +2,8 @@ package com.cfox.fxrlib.file;
 
 import android.os.Environment;
 
+import com.cfox.fxrlib.log.FxLog;
+
 import java.io.File;
 
 public class FileControl {
@@ -62,6 +64,7 @@ public class FileControl {
         if (file.exists()) {
             return true;
         }
+        FxLog.e(TAG,filePath);
         return false;
     }
 

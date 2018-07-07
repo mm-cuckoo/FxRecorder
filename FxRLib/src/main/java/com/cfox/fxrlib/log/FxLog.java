@@ -29,6 +29,12 @@ public class FxLog {
         }
     }
 
+    public static void e(String tag, String msg, Exception e) {
+        if (LOG_WE) {
+            Log.e(tag, LOG_TITLE + msg.replaceAll("\r|\n|\t", "")  , e);
+        }
+    }
+
     public static void d(String tag, String msg) {
         if (LOG_WE) {
             Log.d(tag, LOG_TITLE +  msg.replaceAll("\r|\n|\t", ""));

@@ -1,11 +1,10 @@
 package com.cfox.fxrecorder.activity;
 
-import android.content.ComponentName;
+import android.app.Activity;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Message;
 import android.os.RemoteException;
 import android.support.annotation.Nullable;
@@ -23,6 +22,7 @@ import com.cfox.fxrlib.recorder.RecorderConstants;
 import com.cfox.fxrlib.recorder.wav.audio.AudioStatus;
 import com.cfox.fxrlib.service.RecorderService;
 import com.cfox.fxrlib.service.ServiceConstants;
+import com.cfox.fxrlib.service.connection.PlayerServiceConnection;
 
 
 /**
@@ -34,7 +34,7 @@ import com.cfox.fxrlib.service.ServiceConstants;
  * Msg:
  * **********************************************
  */
-public class PlayerActivity extends BaseActivity implements View.OnClickListener,
+public class PlayerActivity extends Activity implements View.OnClickListener,
         ServiceConstants, RecorderConstants, Constants, AudioStatus {
 
     private static final String TAG = "PlayerActivity";
@@ -48,6 +48,7 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
     private Button mBtnForward;
 
     private IPlayerRecorderService playerRecorderService;
+    private PlayerServiceConnection conn;
 
     private ICallBack.Stub callBack = new ICallBack.Stub() {
         @Override
@@ -65,7 +66,7 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
         }
     };
 
-    private IWaveCallBack.Stub waveCallBack = new IWaveCallBack.Stub() {
+    private IWaveCallBack.Stub mWaveCallBack = new IWaveCallBack.Stub() {
         @Override
         public void back(Bundle bundle) throws RemoteException {
             Message message = mHandler.obtainMessage(HANDLER_KEY_PLAY_WAVE);
@@ -94,7 +95,7 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
 
     private void recorderWaveData(Bundle data) {
         byte[] waveByte = data.getByteArray(PLAY_RECORDER_WAVE_DATE);
-        Log.d(TAG, "" + waveByte.toString());
+        Log.d(TAG, "" + new String (waveByte));
     }
 
     private void recorderStatusChange(Bundle data) {
@@ -132,6 +133,7 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
     }
 
     private void initBindService() {
+        conn = new PlayerServiceConnection(mWaveCallBack);
         Intent intent = new Intent(this, RecorderService.class);
         intent.setAction(ServiceConstants.BIND_TYPE_PALY);
         bindService(intent, conn, BIND_AUTO_CREATE);
@@ -195,72 +197,30 @@ public class PlayerActivity extends BaseActivity implements View.OnClickListener
     }
 
     private void startPlay() {
-//        FileEngine fileEngine = new FileEngine();
-//        fileEngine.verifyFile();
-//        Bundle bundle = new Bundle();
-//        bundle.putString(FILE_PATH, fileEngine.getWavFilePath());
-//        try {
-//            playerRecorderService.startPlay(bundle, callBack);
-//        } catch (RemoteException e) {
-//            e.printStackTrace();
-//        }
+        String path = Environment.getExternalStorageDirectory().getPath() + "/AAAPath/hello-123.wav";
+
+        Bundle bundle = new Bundle();
+        bundle.putString(FILE_PATH, path);
+        conn.startPlay(bundle, callBack);
     }
 
     private void pausePlay() {
-        try {
-            playerRecorderService.pausePlay(null, callBack);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
+        conn.pausePlay( callBack);
     }
 
     private void resumPlay() {
-        try {
-            playerRecorderService.resumePlay(null, callBack);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
+        conn.resumePlay( callBack);
     }
 
     private void stopPlay() {
-        try {
-            playerRecorderService.stopPlay(null, callBack);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
+        conn.stopPlay( callBack);
     }
+
     private void forwardPlay() {
-        try {
-            playerRecorderService.forward(1024 * 50);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
+        conn.forwardPlay(1024 * 50);
     }
 
     private void backPlay() {
-        try {
-            playerRecorderService.back(1024 * 50);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
+        conn.backPlay(1024 * 50);
     }
-
-
-    private ServiceConnection conn = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            playerRecorderService = IPlayerRecorderService.Stub.asInterface(service);
-            try {
-                playerRecorderService.setWaveListener(waveCallBack);
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            playerRecorderService = null;
-        }
-    };
-
 }

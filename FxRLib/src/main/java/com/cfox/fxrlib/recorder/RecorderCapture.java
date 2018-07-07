@@ -45,12 +45,10 @@ public class RecorderCapture implements IAudioStatusListener,
 
     public void startRecorder(String recorderFilePath, String fileName){
         String filePath = mFileEngine.getRecorderFilePath(recorderFilePath, fileName);
-
         FxLog.d(TAG, filePath);
         if (filePath != null) {
             mNativeRecorderWavCapture.startRecorder(filePath);
         } else {
-            // TODO  文件校验失败返回
             statusChange(ERROR_FILE_PATH_NULL);
         }
     }

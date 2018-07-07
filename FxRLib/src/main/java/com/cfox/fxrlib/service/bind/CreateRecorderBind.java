@@ -27,22 +27,7 @@ public class CreateRecorderBind extends ICreateRecorderService.Stub {
 
 
     @Override
-    public void startRecorder(Bundle bundle,ICallBack callback) throws RemoteException {
-        mRecorderCapture.setCallBack(callback).startRecorder(null, null);
-    }
-
-    @Override
-    public void startRecorderSetPath(Bundle bundle, String filePath, ICallBack callback) throws RemoteException {
-        mRecorderCapture.setCallBack(callback).startRecorder(filePath, null);
-    }
-
-    @Override
-    public void startRecorderSetName(Bundle bundle, String fileName, ICallBack callback) throws RemoteException {
-        mRecorderCapture.setCallBack(callback).startRecorder(null, fileName);
-    }
-
-    @Override
-    public void startRecorderSetPathAndName(Bundle bundle, String filePath, String fileName, ICallBack callback) throws RemoteException {
+    public void startRecorder(Bundle bundle, String filePath, String fileName, ICallBack callback) throws RemoteException {
         mRecorderCapture.setCallBack(callback).startRecorder(filePath, fileName);
     }
 
