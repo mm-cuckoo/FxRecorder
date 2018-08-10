@@ -6,6 +6,15 @@ import com.cfox.fxrlib.log.FxLog;
 
 import java.io.File;
 
+/**
+ * **********************************************
+ * Project_Name: FxRecorder
+ * Author : CFOX
+ * Github : https://github.com/CNCFOX/FxRecorder
+ * Instruction :
+ * Msg:
+ * **********************************************
+ */
 public class FileControl {
     private static final String TAG = "FileControl";
     private static final String DEFOULT_FILE_PATH = "/FxRecorder/";

@@ -6,7 +6,7 @@ import com.cfox.fxrlib.ICallBack;
 import com.cfox.fxrlib.IWaveCallBack;
 
 interface ICreateRecorderService {
-        oneway void startRecorder(in Bundle bundle , String filePath,String fileName,ICallBack callback);
+        oneway void startRecorder(in Bundle bundle ,ICallBack callback);
         oneway void setWaveListener(IWaveCallBack callback);
         oneway void pauseRecorder(in Bundle bundle , ICallBack callback);
         oneway void resumeRecorder(in Bundle bundle , ICallBack callback);

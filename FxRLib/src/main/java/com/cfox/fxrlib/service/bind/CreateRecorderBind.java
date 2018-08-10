@@ -7,6 +7,7 @@ import com.cfox.fxrlib.ICallBack;
 import com.cfox.fxrlib.ICreateRecorderService;
 import com.cfox.fxrlib.IWaveCallBack;
 import com.cfox.fxrlib.recorder.RecorderCapture;
+import com.cfox.fxrlib.service.ServiceConstants;
 
 /**
  * **********************************************
@@ -17,7 +18,7 @@ import com.cfox.fxrlib.recorder.RecorderCapture;
  * Msg:
  * **********************************************
  */
-public class CreateRecorderBind extends ICreateRecorderService.Stub {
+public class CreateRecorderBind extends ICreateRecorderService.Stub implements ServiceConstants{
     private static final String TAG = "CreateRecorderBind";
     private RecorderCapture mRecorderCapture;
 
@@ -27,7 +28,13 @@ public class CreateRecorderBind extends ICreateRecorderService.Stub {
 
 
     @Override
-    public void startRecorder(Bundle bundle, String filePath, String fileName, ICallBack callback) throws RemoteException {
+    public void startRecorder(Bundle bundle,ICallBack callback) throws RemoteException {
+        String filePath = null;
+        String fileName = null;
+        if (bundle != null) {
+            filePath = bundle.getString(FILE_PATH, null);
+            fileName = bundle.getString(FILE_NAME, null);
+        }
         mRecorderCapture.setCallBack(callback).startRecorder(filePath, fileName);
     }
 
