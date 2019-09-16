@@ -51,30 +51,15 @@ public class RecorderPlayer implements IAudioStatusListener,
             statusChange(ERROR_NO_PLAY_FILE);
             return;
         }
-
-        try {
-            mNativeRecorderWavPlayer.startPlay(filePath);
-        } catch (IOException e) {
-            statusChange(ERROR_PALY_FAILURE);
-            FxLog.e(TAG, "play error",e);
-        }
-
+        mNativeRecorderWavPlayer.startPlay(filePath);
     }
 
     public void pausePlay() {
-        try {
-            mNativeRecorderWavPlayer.pausePlay();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        mNativeRecorderWavPlayer.pausePlay();
     }
 
     public void resumePlay() {
-        try {
-            mNativeRecorderWavPlayer.resumePaly();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        mNativeRecorderWavPlayer.resumePlay();
     }
 
     public void stopPlay() {

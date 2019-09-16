@@ -2,8 +2,8 @@ package com.cfox.fxrlib.recorder.wav;
 
 import com.cfox.fxrlib.log.FxLog;
 import com.cfox.fxrlib.recorder.wav.audio.AudioPlayer;
-import com.cfox.fxrlib.recorder.wav.audio.AudioStatus;
-import com.cfox.fxrlib.recorder.wav.info.PlayerAudioInfo;
+import com.cfox.fxrlib.recorder.wav.info.StartInfo;
+import com.cfox.fxrlib.recorder.wav.state.AudioStateMachine;
 import com.cfox.fxrlib.recorder.wav.wavfile.WavFileReader;
 
 import java.io.IOException;
@@ -17,13 +17,14 @@ import java.io.IOException;
  * Msg:
  * **********************************************
  */
-public class NativeRecorderWavPlayer implements AudioPlayer.PalyStatusListener{
+public class NativeRecorderWavPlayer implements AudioPlayer.PlayStatusListener {
 
     private static final String TAG = "NativeRecorderWavPlayer";
     private AudioPlayer mAudioPlayer;
     private WavFileReader mWavFileReader;
     private IAudioStatusListener mStatusListener;
     private IAudioWaveDataListener mWaveDataListener;
+    private AudioStateMachine mAudioStateMachine;
     private long mFilePointer;
 
     public void setWaveDataListener(IAudioWaveDataListener mWaveDataListener) {
@@ -37,36 +38,31 @@ public class NativeRecorderWavPlayer implements AudioPlayer.PalyStatusListener{
     public NativeRecorderWavPlayer() {
         mAudioPlayer = new AudioPlayer();
         mWavFileReader = new WavFileReader();
-        mAudioPlayer.setStatusChengeListener(this);
+        mAudioStateMachine = new AudioStateMachine(mAudioPlayer);
+        mAudioStateMachine.start();
+        mAudioPlayer.setStatusChangeListener(this);
     }
 
 
-    public void startPlay(String filePath) throws IOException {
+    public void startPlay(String filePath) {
         FxLog.d(TAG, "Audio File path:" + filePath);
-        if (!mWavFileReader.openFile(filePath)){
-            FxLog.d(TAG, "Audio File read fail");
-            return;
-        }
-        PlayerAudioInfo audioInfo = PlayerAudioInfo.parse(mWavFileReader.getWavFileHeader());
-        if (mAudioPlayer.statrPlay(audioInfo)) {
-            new Thread(AudioPlayRunnable).start();
-        }
+        mAudioPlayer.setWaveDataListener(mWaveDataListener);
+        StartInfo startInfo = new StartInfo();
+        startInfo.put(StartInfo.KEY_FILE_PATH, filePath);
+        startInfo.put(StartInfo.KEY_WAV_FILE, mWavFileReader);
+        mAudioStateMachine.sendStart(startInfo);
     }
 
-    public void pausePlay() throws IOException {
-        mFilePointer = mWavFileReader.getFilePointer();
-        mAudioPlayer.pausePlay();
+    public void pausePlay() {
+        mAudioStateMachine.sendPause();
     }
 
-    public void resumePaly() throws IOException {
-        if (mAudioPlayer.resumePlay()) {
-            mWavFileReader.seek(mFilePointer);
-            new Thread(AudioPlayRunnable).start();
-        }
+    public void resumePlay() {
+        mAudioStateMachine.sendResume();
     }
 
     public void stopPlay() {
-        mAudioPlayer.stopPlay();
+        mAudioStateMachine.sendStop();
     }
 
     public void forward(long length) throws IOException {
@@ -79,37 +75,6 @@ public class NativeRecorderWavPlayer implements AudioPlayer.PalyStatusListener{
 
     public int getRecorderStatus() {
         return mAudioPlayer.getAudioStatus();
-    }
-
-    private Runnable AudioPlayRunnable = new Runnable() {
-        @Override
-        public void run() {
-            byte[] buffer = new byte[getBufferSizse() * 2];
-            while (mAudioPlayer.isPalying() && mWavFileReader.readData(buffer, 0, buffer.length) > 0) {
-                int audioStatus = mAudioPlayer.getAudioStatus();
-                if (audioStatus == AudioStatus.PAUSE || audioStatus == AudioStatus.STOP) {
-                    break;
-                }
-
-                mAudioPlayer.playData(buffer, 0, buffer.length);
-                if (mWaveDataListener != null) {
-                    mWaveDataListener.waveData(buffer);
-                }
-            }
-            playRelease();
-        }
-    };
-
-    private void playRelease() {
-        if (mAudioPlayer.getAudioStatus() == AudioStatus.PAUSE) {
-            return;
-        }
-        mWavFileReader.release();
-        mAudioPlayer.release();
-    }
-
-    private int getBufferSizse() {
-        return mAudioPlayer.getAudioBufferSzie();
     }
 
     @Override

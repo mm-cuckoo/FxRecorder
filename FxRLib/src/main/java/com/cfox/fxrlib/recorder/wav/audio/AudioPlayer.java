@@ -4,7 +4,13 @@ import android.media.AudioTrack;
 import android.util.Log;
 
 import com.cfox.fxrlib.log.FxLog;
+import com.cfox.fxrlib.recorder.wav.IAudioWaveDataListener;
 import com.cfox.fxrlib.recorder.wav.info.PlayerAudioInfo;
+import com.cfox.fxrlib.recorder.wav.info.StartInfo;
+import com.cfox.fxrlib.recorder.wav.state.IAudioManager;
+import com.cfox.fxrlib.recorder.wav.wavfile.WavFileReader;
+
+import java.io.IOException;
 
 /**
  * **********************************************
@@ -15,42 +21,55 @@ import com.cfox.fxrlib.recorder.wav.info.PlayerAudioInfo;
  * Msg:
  * **********************************************
  */
-public class AudioPlayer {
+public class AudioPlayer implements IAudioManager {
     private static final String TAG = "AudioPlayer";
-    private boolean isPlaying = false;
     private int mAudioStatus = AudioStatus.STOP;
     private AudioTrack mAudioTrack;
-    private int mAudioBufferSzie;
-    private PalyStatusListener mStatusChangeListener;
+    private int mAudioBufferSize;
+    private WavFileReader mWavFileReader;
+    private PlayStatusListener mStatusChangeListener;
+    private IAudioWaveDataListener mWaveDataListener;
+    private long mFilePointer;
 
-    public interface PalyStatusListener {
+    public interface PlayStatusListener {
         void statusChange(int status);
     }
 
-    public void setStatusChengeListener(PalyStatusListener mStatusChengeListener) {
+    public void setStatusChangeListener(PlayStatusListener mStatusChengeListener) {
         this.mStatusChangeListener = mStatusChengeListener;
     }
 
-    public int getAudioBufferSzie() {
-        return mAudioBufferSzie;
+    public void setWaveDataListener(IAudioWaveDataListener waveDataListener) {
+        this.mWaveDataListener = waveDataListener;
     }
 
-    public boolean statrPlay(PlayerAudioInfo audioInfo) {
-        if (isPlaying) {
-            FxLog.i(TAG, "Player already started !");
+    public boolean start(StartInfo startInfo) {
+        String filePath = (String) startInfo.get(StartInfo.KEY_FILE_PATH, null);
+        mWavFileReader = (WavFileReader) startInfo.get(StartInfo.KEY_WAV_FILE, null);
+        try {
+            if (!mWavFileReader.openFile(filePath)){
+                sendStatus(AudioStatus.ERROR_OPEN_FILE);
+                FxLog.d(TAG, "Audio File read fail");
+                return false;
+            }
+        } catch (IOException e) {
+            sendStatus(AudioStatus.ERROR_OPEN_FILE);
+            e.printStackTrace();
             return false;
         }
-        mAudioBufferSzie = AudioTrack.getMinBufferSize(audioInfo.getSampleRateInHz(),
-                audioInfo.getChannelConfig(), audioInfo.getAudioFormat());
+        PlayerAudioInfo playerAudioInfo = PlayerAudioInfo.parse(mWavFileReader.getWavFileHeader());
 
-        if (mAudioBufferSzie == AudioTrack.ERROR_BAD_VALUE) {
+        mAudioBufferSize = AudioTrack.getMinBufferSize(playerAudioInfo.getSampleRateInHz(),
+                playerAudioInfo.getChannelConfig(), playerAudioInfo.getAudioFormat());
+
+        if (mAudioBufferSize == AudioTrack.ERROR_BAD_VALUE) {
             FxLog.e(TAG, "Invalid parameter !");
             sendStatus(AudioStatus.ERROR_GET_BUFFER_SIZE_FAIL);
             return false;
         }
 
-        mAudioTrack = new AudioTrack(audioInfo.getStreamType(), audioInfo.getSampleRateInHz(),
-                audioInfo.getChannelConfig(), audioInfo.getAudioFormat(), mAudioBufferSzie, audioInfo.getMode());
+        mAudioTrack = new AudioTrack(playerAudioInfo.getStreamType(), playerAudioInfo.getSampleRateInHz(),
+                playerAudioInfo.getChannelConfig(), playerAudioInfo.getAudioFormat(), mAudioBufferSize, playerAudioInfo.getMode());
 
         if (mAudioTrack.getState() == AudioTrack.STATE_UNINITIALIZED) {
             sendStatus(AudioStatus.ERROR_AUDIO_INITIALIZED_FAIL);
@@ -58,50 +77,46 @@ public class AudioPlayer {
             return false;
         }
         changeStatus(AudioStatus.STARTING);
-        isPlaying = true;
+        new Thread(AudioPlayRunnable).start();
         FxLog.i(TAG, "Start audio player success !");
         return true;
     }
 
-    public void pausePlay() {
-
-        if (!isPlaying) {
-            return;
-        }
-
-        if (mAudioStatus == AudioStatus.RESUME || mAudioStatus == AudioStatus.STARTING) {
-            FxLog.d(TAG, "pausePlay......");
-            changeStatus(AudioStatus.PAUSE);
+    public void pause() {
+        FxLog.d(TAG, "pause......");
+        try {
+            mFilePointer = mWavFileReader.getFilePointer();
             mAudioTrack.pause();
             mAudioTrack.flush();
+            changeStatus(AudioStatus.PAUSE);
+        } catch (IOException e) {
+            sendStatus(AudioStatus.ERROR_OPEN_FILE);
+            e.printStackTrace();
         }
     }
 
 
-    public boolean resumePlay() {
-        if (isPlaying && mAudioStatus == AudioStatus.PAUSE) {
+    public void resume() {
+        try {
+            mWavFileReader.seek(mFilePointer);
             changeStatus(AudioStatus.RESUME);
             if (mAudioTrack != null) {
                 mAudioTrack.play();
-                return true;
             }
+            new Thread(AudioPlayRunnable).start();
+        } catch (IOException e) {
+            sendStatus(AudioStatus.ERROR_OPEN_FILE);
+            e.printStackTrace();
         }
-        return false;
     }
 
-    public void stopPlay() {
-        if (!isPlaying) {
-            return;
-        }
-
-        isPlaying = false;
+    public void stop() {
+        changeStatus(AudioStatus.STOP);
         if (mAudioTrack.getPlayState() == AudioTrack.PLAYSTATE_PLAYING) {
             mAudioTrack.stop();
         }
 
         mAudioTrack.release();
-
-        changeStatus(AudioStatus.STOP);
         Log.i(TAG, "Stop audio player success !");
     }
 
@@ -120,28 +135,42 @@ public class AudioPlayer {
         return mAudioStatus;
     }
 
-    public boolean isPalying() {
-        return isPlaying;
+    private boolean isPlaying() {
+        return mAudioStatus != AudioStatus.STOP;
     }
 
-    public boolean playData(byte[] audioData, int offsetInBytes, int sizeInBytes) {
-        if (!isPlaying) {
-            FxLog.e(TAG, "Player not started !");
-            return false;
-        }
-
-        if (mAudioTrack.write(audioData, offsetInBytes, sizeInBytes) != sizeInBytes) {
+    private void playData(byte[] audioData, int offsetInBytes, int sizeInBytes) {
+        FxLog.d(TAG, "playdata :" + getAudioStatus());
+        if (isPlaying() && mAudioTrack.write(audioData, offsetInBytes, sizeInBytes) == sizeInBytes) {
+            mAudioTrack.play();
+        } else {
             FxLog.e(TAG, "Could not write all the samples to the audio device !");
         }
-
-        mAudioTrack.play();
-
         FxLog.d(TAG, "OK, Played " + sizeInBytes + " bytes !");
-
-        return true;
     }
 
-    public void release() {
-        stopPlay();
+    private Runnable AudioPlayRunnable = new Runnable() {
+        @Override
+        public void run() {
+            byte[] buffer = new byte[mAudioBufferSize * 2];
+            while (isPlaying() && mWavFileReader.readData(buffer, 0, buffer.length) > 0) {
+                if (getAudioStatus() == AudioStatus.PAUSE || getAudioStatus() == AudioStatus.STOP) {
+                    break;
+                }
+                playData(buffer, 0, buffer.length);
+                if (mWaveDataListener != null) {
+                    mWaveDataListener.waveData(buffer);
+                }
+            }
+            playRelease();
+        }
+    };
+
+    private void playRelease() {
+        if (getAudioStatus() == AudioStatus.PAUSE) {
+            return;
+        }
+        mWavFileReader.release();
+        stop();
     }
 }

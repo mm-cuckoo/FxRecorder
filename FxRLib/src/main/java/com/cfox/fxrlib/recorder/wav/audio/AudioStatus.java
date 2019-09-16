@@ -24,5 +24,6 @@ public interface AudioStatus {
     int ERROR_BAD_VALUE                         = 0x0105;
     int ERROR_FILE_PATH_NULL                    = 0x0106;
     int ERROR_NO_PLAY_FILE                      = 0x0107;
-    int ERROR_PALY_FAILURE                      = 0x0108;
+    int ERROR_PLAY_FAILURE                      = 0x0108;
+    int ERROR_OPEN_FILE                         = 0x0109;
 }

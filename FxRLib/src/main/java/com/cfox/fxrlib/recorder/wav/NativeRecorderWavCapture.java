@@ -3,9 +3,8 @@ package com.cfox.fxrlib.recorder.wav;
 
 import com.cfox.fxrlib.recorder.wav.audio.AudioCapture;
 import com.cfox.fxrlib.recorder.wav.info.CaptureAudioInfo;
-import com.cfox.fxrlib.recorder.wav.wavfile.WavFileWriter;
-
-import java.io.IOException;
+import com.cfox.fxrlib.recorder.wav.info.StartInfo;
+import com.cfox.fxrlib.recorder.wav.state.AudioStateMachine;
 
 /**
  * **********************************************
@@ -20,7 +19,8 @@ public class NativeRecorderWavCapture implements AudioCapture.AudioStatusListene
         AudioCapture.OnAudioFrameCapturedListener {
 
     private AudioCapture mAudioCapture;
-    private WavFileWriter mWavFileWriter;
+    private AudioStateMachine mAudioStateMachine;
+//    private WavFileWriter mWavFileWriter;
     private IAudioStatusListener mStatusListener;
     private IAudioWaveDataListener mWaveDataListener;
 
@@ -35,35 +35,34 @@ public class NativeRecorderWavCapture implements AudioCapture.AudioStatusListene
 
     public NativeRecorderWavCapture() {
         mAudioCapture = new AudioCapture();
-        mWavFileWriter = new WavFileWriter();
+//        mWavFileWriter = new WavFileWriter();
+        mAudioStateMachine =  new AudioStateMachine(mAudioCapture);
+        mAudioStateMachine.start();
         mAudioCapture.setStatusChengeListener(this);
+        mAudioCapture.setOnAudioFrameCapturedListener(this);
     }
 
 
     public void startRecorder(String filePath) {
 
         CaptureAudioInfo audioInfo = CaptureAudioInfo.getInstance();
-        try {
-            mWavFileWriter.openFile(filePath, audioInfo.getSampleRateInHz(),
-                    audioInfo.getChannels(), audioInfo.getBitsPerSample());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        mAudioCapture.setOnAudioFrameCapturedListener(this);
-        mAudioCapture.startCapture(audioInfo);
+        StartInfo startInfo = new StartInfo();
+        startInfo.put(StartInfo.KEY_AUDIO_INFO, audioInfo);
+        startInfo.put(StartInfo.KEY_FILE_PATH, filePath);
+        mAudioStateMachine.sendStart(startInfo);
     }
 
     public void pauseRecorder() {
-        mAudioCapture.pauseCapture();
+        mAudioStateMachine.sendPause();
     }
 
     public void resumeRecorder() {
-        mAudioCapture.resumeCapture();
+        mAudioStateMachine.sendResume();
     }
 
     public void stopRecorder() {
-        mAudioCapture.stopCapure();
-        closeWavFileWriter();
+        mAudioStateMachine.sendStop();
+//        closeWavFileWriter();
     }
 
     public int getRecorderStatus() {
@@ -79,22 +78,22 @@ public class NativeRecorderWavCapture implements AudioCapture.AudioStatusListene
 
     @Override
     public void onAudioFrameCaptured(byte[] audioData) {
-        mWavFileWriter.writeData(audioData, 0, audioData.length);
+//        mWavFileWriter.writeData(audioData, 0, audioData.length);
         if (mWaveDataListener != null) {
             mWaveDataListener.waveData(audioData);
         }
     }
 
-    @Override
-    public void onAudioFrameCapturedError() {
-        closeWavFileWriter();
-    }
+//    @Override
+//    public void onAudioFrameCapturedError() {
+//        closeWavFileWriter();
+//    }
 
-    private void closeWavFileWriter() {
-        try {
-            mWavFileWriter.closeFile();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+//    private void closeWavFileWriter() {
+//        try {
+//            mWavFileWriter.closeFile();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
 }
